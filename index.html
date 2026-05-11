@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LED — LLM Enhanced Open-Vocabulary Object Detection</title>
+  <meta name="description" content="LED directly fuses intermediate MLLM hidden states into open-vocabulary detectors through a lightweight zero-initialized cross-attention adapter, improving visual grounding without human-curated synthetic data generation." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,650;8..60,750&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <nav class="site-nav" aria-label="Primary navigation">
+    <div class="nav-wrap">
+      <a class="brand" href="#top" aria-label="LED home">
+        <span class="brand-mark">LED</span>
+        <span class="brand-name">Open-LED</span>
+      </a>
+      <button class="nav-toggle" aria-label="toggle navigation" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="nav-links">
+        <a href="#idea">Idea</a>
+        <a href="#method">Method</a>
+        <a href="#evidence">Evidence</a>
+        <a href="#benchmarks">Benchmarks</a>
+        <a href="#efficiency">Efficiency</a>
+        <a href="#resources">Resources</a>
+        <a class="nav-cta" href="https://github.com/EtaYang10th/Open-LED" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header id="top" class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <div class="kicker"><span></span> arXiv 2503.13794 · CVPR 2026</div>
+        <h1>
+          <span>LLM Enhanced</span>
+          Open-Vocabulary Object Detection
+          <em>without human-curated data generation</em>
+        </h1>
+        <p class="tagline">
+          LED introduces a knowledge-fusion paradigm for open-vocabulary detection: instead of asking foundation models to generate labels or descriptions, it directly injects intermediate MLLM hidden states into a detector decoder through a lightweight zero-initialized cross-attention adapter.
+        </p>
+        <div class="hero-actions">
+          <a class="btn primary" href="https://arxiv.org/abs/2503.13794" target="_blank" rel="noopener">Read the paper</a>
+          <a class="btn" href="https://github.com/EtaYang10th/Open-LED" target="_blank" rel="noopener">View code</a>
+          <a class="btn quiet" href="#benchmarks">Explore results</a>
+        </div>
+        <div class="hero-metrics" aria-label="Key results">
+          <div><strong>+6.34</strong><span>AP<sub>all</sub> on OmniLabel with Qwen2.5-0.5B</span></div>
+          <div><strong>+11.84</strong><span>AP<sub>dp</sub> for positive descriptions</span></div>
+          <div><strong>8.7%</strong><span>extra GFLOPs in the efficient shared-encoder setting</span></div>
+        </div>
+      </div>
+      <div class="hero-visual" aria-label="Knowledge fusion illustration">
+        <div class="paper-card visual-card">
+          <div class="visual-title">latent knowledge route</div>
+          <svg class="fusion-svg" viewBox="0 0 720 440" role="img" aria-label="LED fuses early MLLM hidden states into detector decoder">
+            <defs>
+              <linearGradient id="goldLine" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0" stop-color="#a36a00"/>
+                <stop offset="1" stop-color="#3b6b59"/>
+              </linearGradient>
+              <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#382b16" flood-opacity="0.18"/>
+              </filter>
+            </defs>
+            <rect x="28" y="38" width="220" height="146" rx="22" fill="#fffaf0" stroke="#e8d7b8" filter="url(#softShadow)"/>
+            <text x="138" y="78" text-anchor="middle" class="svg-head">MLLM</text>
+            <text x="138" y="112" text-anchor="middle" class="svg-body">early decoder states</text>
+            <text x="138" y="142" text-anchor="middle" class="svg-note">vision-rich semantics</text>
+            <rect x="250" y="170" width="220" height="112" rx="22" fill="#f6f0df" stroke="#d9c6a5" filter="url(#softShadow)"/>
+            <text x="360" y="212" text-anchor="middle" class="svg-head">LED adapter</text>
+            <text x="360" y="245" text-anchor="middle" class="svg-body">zero-initialized cross-attention</text>
+            <rect x="472" y="258" width="220" height="146" rx="22" fill="#eef5ed" stroke="#cbdccf" filter="url(#softShadow)"/>
+            <text x="582" y="298" text-anchor="middle" class="svg-head">Detector</text>
+            <text x="582" y="332" text-anchor="middle" class="svg-body">grounding decoder</text>
+            <text x="582" y="362" text-anchor="middle" class="svg-note">boxes for free-form text</text>
+            <path d="M248 116 C316 116, 292 226, 250 226" fill="none" stroke="url(#goldLine)" stroke-width="4" stroke-linecap="round"/>
+            <path d="M470 226 C516 226, 492 330, 472 330" fill="none" stroke="url(#goldLine)" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="251" cy="226" r="7" fill="#a36a00"/>
+            <circle cx="471" cy="330" r="7" fill="#3b6b59"/>
+            <g class="token-row">
+              <rect x="74" y="222" width="20" height="88" rx="10"/>
+              <rect x="106" y="238" width="20" height="72" rx="10"/>
+              <rect x="138" y="204" width="20" height="106" rx="10"/>
+              <rect x="170" y="252" width="20" height="58" rx="10"/>
+              <rect x="202" y="232" width="20" height="78" rx="10"/>
+            </g>
+            <text x="148" y="342" text-anchor="middle" class="svg-caption">no synthetic labels</text>
+            <text x="360" y="340" text-anchor="middle" class="svg-caption">train only the fusion path</text>
+            <text x="582" y="86" text-anchor="middle" class="svg-caption">preserve detector geometry</text>
+            <path d="M534 108 h96 M582 108 v96" stroke="#d1b16a" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="idea" class="section">
+      <div class="container narrow">
+        <div class="section-label">01 · central thesis</div>
+        <h2>Use the representation, not the generated annotation.</h2>
+        <p class="lead">
+          Many OVD pipelines improve detectors by asking large foundation models to create pseudo labels, detailed descriptions, or negative examples. LED takes a different route: it treats the MLLM hidden state itself as a semantic reservoir and fuses it into the detector while keeping the detector’s localization structure intact.
+        </p>
+        <div class="claim-box">
+          <div class="claim-number">Proposition</div>
+          <p>
+            Early MLLM decoder layers contain enough spatial and semantic information to strengthen free-form grounding, while deeper layers increasingly specialize toward text-side generation. LED extracts the useful part and inserts it through a stable adapter rather than replacing the detector.
+          </p>
+        </div>
+        <div class="grid cols-3 mt-24">
+          <article class="paper-card mini-card">
+            <span class="mini-index">I</span>
+            <h3>Bypass prompt-crafted data</h3>
+            <p>LED does not depend on manually designed synthetic-data prompts, reducing pipeline-specific bias and engineering cost.</p>
+          </article>
+          <article class="paper-card mini-card">
+            <span class="mini-index">II</span>
+            <h3>Keep detection geometry</h3>
+            <p>The detector remains responsible for box localization; MLLM states act as adaptation prompts rather than a replacement feature map.</p>
+          </article>
+          <article class="paper-card mini-card">
+            <span class="mini-index">III</span>
+            <h3>Spend computation sparingly</h3>
+            <p>Most gains come from the first few LLM layers, enabling a small overhead relative to running a full MLLM detector.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="method" class="section tinted">
+      <div class="container">
+        <div class="section-label">02 · method</div>
+        <h2>A quiet adapter between two strong priors.</h2>
+        <p class="lead">
+          LED is composed of an MLLM branch for semantic prompt extraction, a mainstream open-vocabulary detector, and a zero-initialized cross-attention adapter. The zero gate lets training start from the original detector behavior and gradually admit MLLM knowledge only when it becomes useful.
+        </p>
+        <div class="method-flow" aria-label="LED pipeline">
+          <div class="flow-node">
+            <span>1</span>
+            <h3>Shared image-text input</h3>
+            <p>The MLLM and detector observe the same image and natural-language grounding query.</p>
+          </div>
+          <div class="flow-arrow"></div>
+          <div class="flow-node emphasized">
+            <span>2</span>
+            <h3>Early hidden states</h3>
+            <p>Intermediate LLM decoder states are truncated into visual and textual token segments.</p>
+          </div>
+          <div class="flow-arrow"></div>
+          <div class="flow-node">
+            <span>3</span>
+            <h3>Adaptation prompts</h3>
+            <p>A lightweight convolution and cross-attention pathway projects MLLM states into detector space.</p>
+          </div>
+          <div class="flow-arrow"></div>
+          <div class="flow-node">
+            <span>4</span>
+            <h3>Grounded boxes</h3>
+            <p>The detector decoder receives semantic guidance while retaining its localization bias.</p>
+          </div>
+        </div>
+
+        <div class="grid cols-2 mt-32 align-start">
+          <article class="paper-card formula-card">
+            <h3>Hidden-state extraction</h3>
+            <p>LED extracts the hidden state from decoder layer \(\ell_{LM}\), then truncates it into visual and textual token groups.</p>
+            <div class="equation">
+              H<sub>ℓ</sub> = Decoder<sub>ℓ</sub>(H<sub>ℓ−1</sub>)<br />
+              E<sub>V</sub><sup>L</sup>, E<sub>T</sub> = Truncate(H<sub>ℓ</sub>)
+            </div>
+          </article>
+          <article class="paper-card formula-card">
+            <h3>Stable fusion</h3>
+            <p>The adapter starts with a zero-initialized gate, preventing randomly initialized prompts from disturbing the detector at the beginning of training.</p>
+            <div class="equation">
+              E<sub>D</sub><sup>ℓ</sup> = E<sub>D</sub><sup>ℓ−1</sup> + Linear(ŜV)<br />
+              Ŝ = concat(tanh(g) · softmax(S<sub>prompt</sub>), softmax(S<sub>det</sub>))
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="evidence" class="section">
+      <div class="container">
+        <div class="section-label">03 · empirical signal</div>
+        <h2>The gain concentrates where semantics matter.</h2>
+        <p class="lead">
+          Category-style detection is already strong in specialized detectors. LED’s largest improvements appear on description-grounded and relationship-heavy queries, where semantic composition, attributes, and spatial language become the bottleneck.
+        </p>
+        <div class="grid cols-3 evidence-grid">
+          <div class="paper-card metric-tile">
+            <small>OmniLabel · Qwen2.5-0.5B</small>
+            <strong>28.03</strong>
+            <span>AP<sub>all</sub>, +6.34 over G-DINO</span>
+          </div>
+          <div class="paper-card metric-tile accent">
+            <small>OmniLabel · Qwen2.5-0.5B</small>
+            <strong>36.45</strong>
+            <span>AP<sub>dp</sub>, +11.84 on positive descriptions</span>
+          </div>
+          <div class="paper-card metric-tile green">
+            <small>OVDEval · relationship</small>
+            <strong>30.9</strong>
+            <span>+3.7 AP on relationship grounding</span>
+          </div>
+        </div>
+        <div class="paper-card mt-24 insight-card">
+          <div>
+            <h3>Why not simply replace the detector?</h3>
+            <p>
+              The supplement shows that raw MLLM hidden states cannot serve as a drop-in visual detector feature. They are semantically rich but not geometrically aligned for localization. LED therefore inserts a controlled fusion mechanism and leaves box prediction to the detector.
+            </p>
+          </div>
+          <div id="replacement-table" class="dynamic-table compact"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="benchmarks" class="section tinted">
+      <div class="container">
+        <div class="section-label">04 · dynamic results</div>
+        <h2>Paper tables, rendered as interactive evidence.</h2>
+        <p class="lead">
+          Select a benchmark family to inspect the reported values. Tables can be sorted, and the main OmniLabel panel can be re-plotted by metric to reveal where each adaptation source helps most.
+        </p>
+
+        <div class="results-shell paper-card">
+          <div class="tabs" role="tablist" aria-label="Result tables">
+            <button class="active" data-result-tab="omnilabel" role="tab">OmniLabel</button>
+            <button data-result-tab="refcoco" role="tab">RefCOCO</button>
+            <button data-result-tab="d3" role="tab">D3 / OVDEval</button>
+            <button data-result-tab="adapters" role="tab">Adapters</button>
+            <button data-result-tab="synthetic" role="tab">Synthetic-data baselines</button>
+          </div>
+
+          <div class="tab-panel active" data-result-panel="omnilabel">
+            <div class="panel-head">
+              <div>
+                <h3>OmniLabel model comparison</h3>
+                <p>GroundingDINO vs. LED adaptation prompts from different LLM families.</p>
+              </div>
+              <div class="metric-switch" aria-label="Metric selector">
+                <button class="active" data-omni-metric="apAll">AP<sub>all</sub></button>
+                <button data-omni-metric="apC">AP<sub>c</sub></button>
+                <button data-omni-metric="apD">AP<sub>d</sub></button>
+                <button data-omni-metric="apDp">AP<sub>dp</sub></button>
+              </div>
+            </div>
+            <div id="omni-bars" class="bar-board"></div>
+            <div id="omni-table" class="dynamic-table mt-24"></div>
+          </div>
+
+          <div class="tab-panel" data-result-panel="refcoco">
+            <div class="panel-head">
+              <div>
+                <h3>Referring expression comprehension</h3>
+                <p>LED improves RefCOCO, RefCOCO+, and RefCOCOg splits, especially with InternLM2.5-7B hidden states.</p>
+              </div>
+            </div>
+            <div id="refcoco-table" class="dynamic-table"></div>
+          </div>
+
+          <div class="tab-panel" data-result-panel="d3">
+            <div class="panel-head">
+              <div>
+                <h3>D3 and OVDEval sub-categories</h3>
+                <p>Using Qwen2-0.5B early hidden states, LED strengthens description and relationship-heavy settings.</p>
+              </div>
+            </div>
+            <div id="d3-table" class="dynamic-table"></div>
+          </div>
+
+          <div class="tab-panel" data-result-panel="adapters">
+            <div class="panel-head">
+              <div>
+                <h3>Adapter architecture analysis</h3>
+                <p>Text-free adaptation, Arch. IV, gives the best overall score in the reported OmniLabel adapter study.</p>
+              </div>
+            </div>
+            <div id="adapter-bars" class="bar-board compact-bars"></div>
+            <div id="adapter-table" class="dynamic-table mt-24"></div>
+          </div>
+
+          <div class="tab-panel" data-result-panel="synthetic">
+            <div class="panel-head">
+              <div>
+                <h3>Comparison with synthetic-data pipelines</h3>
+                <p>On OmniLabel, LED with InternVL2-1B surpasses NEG-Text and DesCo without generating additional curated labels.</p>
+              </div>
+            </div>
+            <div id="synthetic-table" class="dynamic-table"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="efficiency" class="section">
+      <div class="container">
+        <div class="section-label">05 · efficiency frontier</div>
+        <h2>Small LLM slices can be more useful than large detectors.</h2>
+        <p class="lead">
+          LED uses the first two layers of a lightweight Qwen2-0.5B branch in its efficient setting. The adapter itself is tiny; most of the extra compute comes from the shallow LLM slice, and the reported overhead is only 8.7% relative to GroundingDINO.
+        </p>
+        <div class="grid cols-2 align-start">
+          <article class="paper-card">
+            <div class="panel-head tight">
+              <div>
+                <h3>Compute decomposition</h3>
+                <p>Additional parameters and GFLOPs relative to G-DINO.</p>
+              </div>
+            </div>
+            <div id="efficiency-breakdown" class="breakdown"></div>
+            <div id="efficiency-table" class="dynamic-table compact mt-16"></div>
+          </article>
+          <article class="paper-card">
+            <div class="panel-head tight">
+              <div>
+                <h3>AP<sub>d</sub> vs. GFLOPs</h3>
+                <p>Circle size encodes parameter count. LED points sit near the efficient detector cluster, not the huge MLLM cluster.</p>
+              </div>
+            </div>
+            <div id="efficiency-scatter" class="scatter-wrap"></div>
+          </article>
+        </div>
+        <div class="paper-card mt-24">
+          <div class="panel-head tight">
+            <div>
+              <h3>SOTA detectors and MLLMs on OmniLabel</h3>
+              <p>Sortable table from the paper’s comparison with efficient detectors and large MLLM baselines.</p>
+            </div>
+          </div>
+          <div id="sota-table" class="dynamic-table"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="quickstart" class="section tinted">
+      <div class="container">
+        <div class="section-label">06 · reproducibility</div>
+        <h2>From repository to training run.</h2>
+        <p class="lead">
+          The codebase builds on GroundingDINO and trains the LED adapter with mixed OD/VG data. The commands below mirror the repository’s installation path and keep the blog focused on reproducing the detection pipeline.
+        </p>
+        <div class="grid cols-2">
+          <div class="paper-card code-card">
+            <h3>Install</h3>
+<pre class="code"><code>cd GroundingDINO
+pip install -r requirements.txt
+
+cd models/GroundingDINO/ops
+python setup.py build install
+python test.py</code></pre>
+          </div>
+          <div class="paper-card code-card">
+            <h3>Prepare OD/VG data</h3>
+<pre class="code"><code>python tools/coco2odvg.py \
+  --image-root path/coco_2017/train2017 \
+  --anno-file path/coco_2017/annotations/instances_train2017.json \
+  --out-jsonl path/coco_2017/annotations/coco2017_train_odvg.jsonl</code></pre>
+          </div>
+          <div class="paper-card code-card">
+            <h3>Configure mixed dataset</h3>
+<pre class="code"><code>{
+  "train": [
+    {"root": "path/Objects365/", "dataset_mode": "odvg"},
+    {"root": "path/coco_2017/train2017/", "dataset_mode": "odvg"},
+    {"root": "path/flickr30k/images/", "dataset_mode": "odvg"}
+  ],
+  "val": [{"root": "path/coco_2017/val2017", "dataset_mode": "coco"}]
+}</code></pre>
+          </div>
+          <div class="paper-card code-card">
+            <h3>Train</h3>
+<pre class="code"><code>bash train.sh
+# set --pretrained_path and --dataset_cfg
+# according to your local environment</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="resources" class="section">
+      <div class="container">
+        <div class="section-label">07 · resources</div>
+        <h2>Paper, code, and citation.</h2>
+        <div class="grid cols-3 mt-24">
+          <a class="paper-card resource-card" href="https://arxiv.org/abs/2503.13794" target="_blank" rel="noopener">
+            <span>Paper</span>
+            <h3>arXiv:2503.13794</h3>
+            <p>LED: LLM Enhanced Open-Vocabulary Object Detection without Human Curated Data Generation.</p>
+          </a>
+          <a class="paper-card resource-card" href="https://github.com/EtaYang10th/Open-LED" target="_blank" rel="noopener">
+            <span>Code</span>
+            <h3>Open-LED</h3>
+            <p>Implementation, training scripts, dataset preparation, and GroundingDINO integration.</p>
+          </a>
+          <a class="paper-card resource-card" href="mailto:eta.yang@rutgers.edu">
+            <span>Contact</span>
+            <h3>Rutgers University</h3>
+            <p>Yang Zhou, Shiyu Zhao, Yuxiao Chen, Zhenting Wang, Can Jin, Mingyu Zhao, Dimitris N. Metaxas.</p>
+          </a>
+        </div>
+        <div class="bibtex-wrap mt-32">
+          <button class="copy-btn" data-copy="#bibtex-box">Copy BibTeX</button>
+<pre class="code" id="bibtex-box"><code>@misc{zhou2025led,
+  title        = {LED: LLM Enhanced Open-Vocabulary Object Detection without Human Curated Data Generation},
+  author       = {Zhou, Yang and Zhao, Shiyu and Chen, Yuxiao and Wang, Zhenting and Jin, Can and Zhao, Mingyu and Metaxas, Dimitris N.},
+  year         = {2025},
+  eprint       = {2503.13794},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CV},
+  url          = {https://arxiv.org/abs/2503.13794}
+}</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-wrap">
+      <div>© 2026 LED · Rutgers University · Knowledge fusion for open-vocabulary grounding.</div>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
