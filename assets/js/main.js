@@ -142,16 +142,30 @@ function makeTable(rootId, columns, rows, options = {}) {
 function renderBars(rootId, rows, metric, options = {}) {
   const root = document.getElementById(rootId);
   if (!root) return;
-  const max = Math.max(...rows.map((row) => row[metric] || 0));
-  root.innerHTML = rows.map((row) => {
-    const width = max ? ((row[metric] || 0) / max) * 100 : 0;
-    const value = formatNumber(row[metric]);
+  const values = rows.map((row) => row[metric] || 0);
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const range = Math.max(rawMax - rawMin, 1);
+  const lower = options.localScale ? Math.max(0, rawMin - range * 0.18) : 0;
+  const upper = options.localScale ? rawMax + range * 0.08 : rawMax;
+  const scaleRange = Math.max(upper - lower, 1);
+
+  const bars = rows.map((row) => {
+    const value = row[metric] || 0;
+    const width = ((value - lower) / scaleRange) * 100;
+    const shownWidth = Math.max(0, Math.min(100, width));
     return `<div class="bar-item ${row.baseline ? "baseline" : ""}">
       <div class="bar-name">${row.framework || row.method}</div>
-      <div class="bar-track"><span class="bar-fill" data-width="${width.toFixed(1)}"></span></div>
-      <div class="bar-value">${value}</div>
+      <div class="bar-track"><span class="bar-fill" data-width="${shownWidth.toFixed(1)}"></span></div>
+      <div class="bar-value">${formatNumber(value)}</div>
     </div>`;
   }).join("");
+
+  const note = options.localScale
+    ? `<div class="bar-scale-note">local axis · ${formatNumber(lower)} → ${formatNumber(upper)} ${metricLabels[metric] || metric}</div>`
+    : "";
+
+  root.innerHTML = `${bars}${note}`;
   requestAnimationFrame(() => {
     root.querySelectorAll(".bar-fill").forEach((bar) => {
       bar.style.width = `${bar.dataset.width}%`;
@@ -183,37 +197,86 @@ function renderScatter() {
   const root = document.getElementById("efficiency-scatter");
   if (!root) return;
   const rows = resultData.sota;
-  const minX = 350;
-  const maxX = 18500;
-  const minY = 3;
-  const maxY = 29;
-  const padX = 9;
-  const padY = 10;
+  const width = 760;
+  const height = 470;
+  const margin = { top: 34, right: 34, bottom: 70, left: 70 };
+  const minX = 380;
+  const maxX = 20000;
+  const minY = 0;
+  const maxY = 30;
+  const logMin = Math.log10(minX);
+  const logMax = Math.log10(maxX);
 
-  const xPos = (x) => {
-    const logMin = Math.log10(minX);
-    const logMax = Math.log10(maxX);
-    const t = (Math.log10(x) - logMin) / (logMax - logMin);
-    return padX + t * (100 - padX * 2);
+  const x = (value) => {
+    const t = (Math.log10(value) - logMin) / (logMax - logMin);
+    return margin.left + t * (width - margin.left - margin.right);
   };
-  const yPos = (y) => {
-    const t = (y - minY) / (maxY - minY);
-    return padY + t * (100 - padY * 2);
+  const y = (value) => {
+    const t = (value - minY) / (maxY - minY);
+    return height - margin.bottom - t * (height - margin.top - margin.bottom);
   };
-  const radius = (params) => Math.max(18, Math.min(50, 12 + Math.sqrt(params) / 4.7));
+  const radius = (params) => Math.max(5.5, Math.min(18, 4 + Math.sqrt(params) / 18));
+  const color = (group) => ({ led: "#315f4e", detector: "#b98620", mllm: "#346d8d" }[group] || "#5d665f");
+  const ticksX = [400, 800, 2000, 5000, 10000, 20000];
+  const ticksY = [0, 10, 20, 30];
+  const callouts = new Map([
+    ["FIBER-B + LED", { dx: -118, dy: -58 }],
+    ["G-DINO + LED", { dx: -126, dy: 20 }],
+    ["ROD-MLLM", { dx: 18, dy: -42 }],
+    ["InternVL3-78B", { dx: -166, dy: -22 }],
+    ["Qwen3VL-2B", { dx: 20, dy: 28 }],
+  ]);
+
+  const grid = [
+    ...ticksX.map((tick) => `<line class="scatter-grid" x1="${x(tick)}" x2="${x(tick)}" y1="${margin.top}" y2="${height - margin.bottom}" />`),
+    ...ticksY.map((tick) => `<line class="scatter-grid" x1="${margin.left}" x2="${width - margin.right}" y1="${y(tick)}" y2="${y(tick)}" />`),
+  ].join("");
+
+  const tickLabels = [
+    ...ticksX.map((tick) => `<text class="scatter-tick" x="${x(tick)}" y="${height - 38}" text-anchor="middle">${tick >= 1000 ? `${tick / 1000}T` : `${tick}G`}</text>`),
+    ...ticksY.map((tick) => `<text class="scatter-tick" x="${margin.left - 14}" y="${y(tick) + 4}" text-anchor="end">${tick}</text>`),
+  ].join("");
+
+  const ledHull = `<rect class="scatter-region efficient" x="${x(390)}" y="${y(29)}" width="${x(520) - x(390)}" height="${y(12) - y(29)}" rx="16" />`;
+  const mllmHull = `<rect class="scatter-region huge" x="${x(3000)}" y="${y(27)}" width="${x(20000) - x(3000)}" height="${y(3) - y(27)}" rx="16" />`;
 
   const points = rows.map((row) => {
-    const size = radius(row.params);
-    const left = xPos(row.gflops);
-    const bottom = yPos(row.apD);
-    const short = row.model.includes("LED") ? "LED" : row.model.split(/[ -]/)[0].slice(0, 4);
-    return `<div class="scatter-point ${row.group}" style="left:${left}%; bottom:${bottom}%; width:${size}px; height:${size}px;" title="${row.model}: ${row.gflops}G, AP_d ${row.apD}">${short}</div>
-      <div class="scatter-label" style="left:calc(${left}% + 14px); bottom:calc(${bottom}% + 12px);">
-        <strong>${row.model}</strong><br>${formatNumber(row.gflops)}G · AP_d ${formatNumber(row.apD)} · ${formatNumber(row.params)}M
-      </div>`;
+    const px = x(row.gflops);
+    const py = y(row.apD);
+    const short = row.model.includes("LED") ? "LED" : row.model.replace("InternVL3", "IVL3").replace("Qwen3VL", "Qwen").split(/[ -]/)[0].slice(0, 5);
+    return `<g class="scatter-dot ${row.group}" tabindex="0">
+      <circle cx="${px}" cy="${py}" r="${radius(row.params)}" fill="${color(row.group)}" />
+      <text x="${px}" y="${py + 3}" text-anchor="middle">${short}</text>
+      <title>${row.model}: ${formatNumber(row.gflops)}G · AP_d ${formatNumber(row.apD)} · ${formatNumber(row.params)}M params</title>
+    </g>`;
   }).join("");
 
-  root.innerHTML = `${points}<div class="scatter-axis x">GFLOPs, log scale →</div><div class="scatter-axis y">AP_d →</div>`;
+  const labels = rows.filter((row) => callouts.has(row.model)).map((row) => {
+    const px = x(row.gflops);
+    const py = y(row.apD);
+    const { dx, dy } = callouts.get(row.model);
+    const lx = Math.max(margin.left + 8, Math.min(width - margin.right - 168, px + dx));
+    const ly = Math.max(margin.top + 10, Math.min(height - margin.bottom - 58, py + dy));
+    return `<g class="scatter-callout">
+      <path d="M${px},${py} L${lx + 10},${ly + 38}" />
+      <rect x="${lx}" y="${ly}" width="166" height="54" rx="10" />
+      <text x="${lx + 10}" y="${ly + 20}">${row.model}</text>
+      <text class="muted" x="${lx + 10}" y="${ly + 39}">${formatNumber(row.gflops)}G · AP_d ${formatNumber(row.apD)}</text>
+    </g>`;
+  }).join("");
+
+  root.innerHTML = `<svg class="scatter-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="AP_d versus GFLOPs efficiency plot">
+    ${ledHull}${mllmHull}${grid}
+    <line class="scatter-axis-line" x1="${margin.left}" x2="${width - margin.right}" y1="${height - margin.bottom}" y2="${height - margin.bottom}" />
+    <line class="scatter-axis-line" x1="${margin.left}" x2="${margin.left}" y1="${margin.top}" y2="${height - margin.bottom}" />
+    ${tickLabels}
+    <text class="scatter-axis-title" x="${width / 2}" y="${height - 12}" text-anchor="middle">GFLOPs, log scale</text>
+    <text class="scatter-axis-title" transform="translate(20 ${height / 2}) rotate(-90)" text-anchor="middle">AP_d</text>
+    <text class="scatter-region-label" x="${x(405)}" y="${y(28)}">efficient LED zone</text>
+    <text class="scatter-region-label" x="${x(3300)}" y="${y(28)}">large MLLMs</text>
+    ${points}${labels}
+  </svg>
+  <div class="scatter-legend"><span class="led"></span>LED-enhanced detector <span class="detector"></span>detector <span class="mllm"></span>MLLM / VLM baseline</div>`;
 }
 
 function initNavigation() {
@@ -292,7 +355,7 @@ function initOmniMetricSwitch() {
     button.addEventListener("click", () => {
       const metric = button.dataset.omniMetric;
       buttons.forEach((btn) => btn.classList.toggle("active", btn === button));
-      renderBars("omni-bars", resultData.omni, metric);
+      renderBars("omni-bars", resultData.omni, metric, { localScale: true });
     });
   });
 }
@@ -372,7 +435,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initCopy();
   initOmniMetricSwitch();
   initTables();
-  renderBars("omni-bars", resultData.omni, "apAll");
+  renderBars("omni-bars", resultData.omni, "apAll", { localScale: true });
   renderBars("adapter-bars", resultData.adapters, "apAll");
   renderEfficiencyBreakdown();
   renderScatter();
